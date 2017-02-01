@@ -1,7 +1,7 @@
 {
   "name": "sschat-server",
-  "version": "0.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "Server for simple secure chat (sschat).",
   "main": "index.js",
   "directories": {
     "example": "examples",
@@ -12,12 +12,11 @@
     "url": "url"
   },
   "scripts": {
-    "test": "make test"
+    "test": "mocha"
   },
   "author": "Gabriel Esteban <yufuven@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "chai": "^3.5.0",
     "mocha": "^3.2.0"
   }
 }
