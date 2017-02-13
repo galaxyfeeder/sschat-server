@@ -1,5 +1,6 @@
 var io = require('socket.io')();
 var mongodb = require('mongodb');
+var NodeRSA = require('node-rsa');
 
 var dbclient = mongodb.MongoClient;
 var dburl = 'mongodb://localhost:27017/sschat';
@@ -22,6 +23,10 @@ io.on('connection', function(socket){
         }else{
             socket.emit('info', 'Data malformed. Not registered.');
         }
+    });
+
+    socket.on('create keys', function(data){
+
     });
 
     socket.on('message', function(data){
