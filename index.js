@@ -27,10 +27,24 @@ io.on('connection', function(socket){
     socket.on('message', function(data){
         // data = {'message': '...', 'to': '...'}
         if(pub_key !== undefined){
+            var message = {
+                'message': data['message'],
+                'sender': pub_key,
+                'to': data['to']
+            };
             if(data.to in clients){
-
+                message['sended'] = true;
+                socket.broadcast.to(clients[data.to]).emit('message', message);
+                MongoClient.connect(url, function(err, db) {
+                    db.collection('messages').insertOne(message, function(err, res){});
+                    db.close();
+                });
             }else{
-
+                message['sended'] = false;
+                MongoClient.connect(url, function(err, db) {
+                    db.collection('messages').insertOne(message, function(err, res){});
+                    db.close();
+                });
             }
         }else{
             socket.emit('info', 'Not registered. You should register first.');
