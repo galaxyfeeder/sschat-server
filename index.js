@@ -2,7 +2,7 @@ var io = require('socket.io')();
 var mongodb = require('mongodb');
 
 var dbclient = mongodb.MongoClient;
-var dburl = 'mogodb://localhost:27017/sschat';
+var dburl = 'mongodb://localhost:27017/sschat';
 
 var clients = {};
 
@@ -30,7 +30,7 @@ io.on('connection', function(socket){
             if(data.to in clients){
 
             }else{
-                
+
             }
         }else{
             socket.emit('info', 'Not registered. You should register first.');
@@ -40,7 +40,21 @@ io.on('connection', function(socket){
     socket.on('add contact', function(data){
         // data = {'pub_key': '...', 'name': '...'}
         if(pub_key !== undefined){
-
+            var contact = {
+                'name': data['name'],
+                'owner': pub_key,
+                'pub_key': data['pub_key']
+            };
+            MongoClient.connect(url, function(err, db) {
+                db.collection('contacts').insertOne(contact, function(err, res){
+                    if(err == null){
+                        socket.emit('info', data['pub_key']+' added correctly.');
+                    }else{
+                        socket.emit('info', data['pub_key']+' not added correctly.');
+                    }
+                });
+                db.close();
+            });
         }else{
             socket.emit('info', 'Not registered. You should register first.');
         }
@@ -49,7 +63,16 @@ io.on('connection', function(socket){
     socket.on('remove contact', function(data){
         // data = {'pub_key': '...'}
         if(pub_key !== undefined){
-
+            MongoClient.connect(url, function(err, db) {
+                db.collection('contacts').deleteOne({'owner': pub_key, 'pub_key': data['pub_key']}, function(err, res){
+                    if(err == null){
+                        socket.emit('info', data['pub_key']+' edited correctly.');
+                    }else{
+                        socket.emit('info', data['pub_key']+' not edited correctly.');
+                    }
+                });
+                db.close();
+            });
         }else{
             socket.emit('info', 'Not registered. You should register first.');
         }
@@ -58,7 +81,16 @@ io.on('connection', function(socket){
     socket.on('edit contact', function(data){
         // data = {'pub_key': '...', 'name': '....'}
         if(pub_key !== undefined){
-
+            MongoClient.connect(url, function(err, db) {
+                db.collection('contacts').updateOne({'owner': pub_key, 'pub_key': data['pub_key']}, {'name': data['name']}, function(err, res){
+                    if(err == null){
+                        socket.emit('info', data['pub_key']+' edited correctly.');
+                    }else{
+                        socket.emit('info', data['pub_key']+' not edited correctly.');
+                    }
+                });
+                db.close();
+            });
         }else{
             socket.emit('info', 'Not registered. You should register first.');
         }
@@ -66,7 +98,16 @@ io.on('connection', function(socket){
 
     socket.on('get contacts', function(data){
         if(pub_key !== undefined){
-
+            MongoClient.connect(url, function(err, db) {
+                db.collection('contacts').find({'owner': pub_key}).toArray(function(err, res){
+                    if(err == null){
+                        socket.emit('contacts', res);
+                    }else{
+                        socket.emit('info', data['pub_key']+' not edited correctly.');
+                    }
+                });
+                db.close();
+            });
         }else{
             socket.emit('info', 'Not registered. You should register first.');
         }
