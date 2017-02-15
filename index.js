@@ -25,10 +25,6 @@ io.on('connection', function(socket){
         }
     });
 
-    socket.on('create keys', function(data){
-
-    });
-
     socket.on('message', function(data){
         // data = {'message': '...', 'to': '...'}
         if(pub_key !== undefined){
@@ -138,6 +134,6 @@ io.on('connection', function(socket){
         }
     });
 });
-io.listen(3000);
+io.listen(4000);
 
-console.log("Socket started at localhost:3000");
+console.log("Socket started at localhost:4000");
