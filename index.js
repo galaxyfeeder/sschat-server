@@ -12,11 +12,12 @@ io.on('connection', function(socket){
 
     socket.on('register', function(data){
         // data = {'pub_key': '......'}
-        if('pub_key' in data && data['pub_key'] !== undefined){
+        var json = JSON.parse(data);
+        if(json['pub_key'] !== undefined){
             if(pub_key in clients && pub_key === undefined){
                 socket.emit('info', 'Already registered.');
             }else{
-                pub_key = data['pub_key'];
+                pub_key = json['pub_key'];
                 clients[pub_key] = socket.id;
                 socket.emit('info', 'Correctly registered.');
             }
@@ -118,7 +119,7 @@ io.on('connection', function(socket){
                     if(err == null){
                         socket.emit('contacts', res);
                     }else{
-                        socket.emit('info', data['pub_key']+' not edited correctly.');
+                        socket.emit('info', 'Contacts not edited correctly.');
                     }
                 });
                 db.close();
