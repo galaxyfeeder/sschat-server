@@ -2,8 +2,8 @@ var io = require('socket.io')();
 var mongodb = require('mongodb');
 var NodeRSA = require('node-rsa');
 
-var dbclient = mongodb.MongoClient;
-var dburl = 'mongodb://localhost:27017/sschat';
+var MongoClient = mongodb.MongoClient;
+var url = 'mongodb://localhost:27017/sschat';
 
 var clients = {};
 
@@ -28,15 +28,17 @@ io.on('connection', function(socket){
 
     socket.on('message', function(data){
         // data = {'message': '...', 'to': '...'}
+        var json = JSON.parse(data);
         if(pub_key !== undefined){
             var message = {
-                'message': data['message'],
+                'message': json.message,
                 'sender': pub_key,
-                'to': data['to']
+                'to': json.to,
+                'timestamp': new Date()
             };
             if(data.to in clients){
                 message['sended'] = true;
-                socket.broadcast.to(clients[data.to]).emit('message', message);
+                socket.broadcast.to(clients[json.to]).emit('message', message);
                 MongoClient.connect(url, function(err, db) {
                     db.collection('messages').insertOne(message, function(err, res){});
                     db.close();
@@ -53,23 +55,63 @@ io.on('connection', function(socket){
         }
     });
 
-    socket.on('add contact', function(data){
-        // data = {'pub_key': '...', 'name': '...'}
+    socket.on('get conversations', function(data){
         if(pub_key !== undefined){
-            var contact = {
-                'name': data['name'],
-                'owner': pub_key,
-                'pub_key': data['pub_key']
-            };
             MongoClient.connect(url, function(err, db) {
-                db.collection('contacts').insertOne(contact, function(err, res){
+                db.collection('contacts').find({'owner': pub_key}).toArray(function(err, res){
+                    var conversations = {};
                     if(err == null){
-                        socket.emit('info', data['pub_key']+' added correctly.');
-                    }else{
-                        socket.emit('info', data['pub_key']+' not added correctly.');
+                        for(var contact of res){
+                            db.collection('messages').find({$or: [{'sender': pub_key}, {'to': pub_key}]}).limit(50).toArray(function(err, resmes){
+                                if(err == null){
+                                    conversations[contact.pub_key] = resmes;
+                                }
+                                if(Object.keys(conversations).length == res.length){
+                                    socket.emit('info', 'Conversations retrieved.');
+                                    socket.emit('conversations', conversations);
+                                    console.log(conversations);
+                                    db.close();
+                                }
+                            });
+                        }
                     }
                 });
-                db.close();
+            });
+        }
+    });
+
+    socket.on('add contact', function(data){
+        // data = {'pub_key': '...', 'name': '...'}
+        var json = JSON.parse(data);
+        if(pub_key !== undefined && json.name !== undefined && json.pub_key !== undefined){
+            var contact1 = {
+                'name': json.name,
+                'owner': pub_key,
+                'pub_key': json.pub_key
+            };
+            var contact2 = {
+                'name': 'undefined',
+                'owner': json.pub_key,
+                'pub_key': pub_key
+            };
+            MongoClient.connect(url, function(err, db) {
+                db.collection('contacts').insertMany([contact1, contact2], function(err, res){
+                    if(err == null){
+                        socket.emit('info', json.pub_key+' added correctly.');
+
+                        // Resend full contact list
+                        db.collection('contacts').find({'owner': pub_key}).toArray(function(err, res){
+                            if(err == null){
+                                socket.emit('contacts', res);
+                            }else{
+                                socket.emit('info', 'Contacts not edited correctly.');
+                            }
+                            db.close();
+                        });
+                    }else{
+                        socket.emit('info', json.pub_key+' not added correctly.');
+                    }
+                });
             });
         }else{
             socket.emit('info', 'Not registered. You should register first.');

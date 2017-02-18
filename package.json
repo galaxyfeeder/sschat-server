@@ -13,5 +13,8 @@
     "mongodb": "^2.2.22",
     "node-rsa": "^0.4.2",
     "socket.io": "^1.7.2"
+},
+  "scripts": {
+    "start": "node index.js"
   }
 }
