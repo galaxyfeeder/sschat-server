@@ -36,7 +36,7 @@ io.on('connection', function(socket){
                 'to': json.to,
                 'timestamp': new Date()
             };
-            if(data.to in clients){
+            if(json.to in clients){
                 message['sended'] = true;
                 socket.broadcast.to(clients[json.to]).emit('message', message);
                 MongoClient.connect(url, function(err, db) {
@@ -50,6 +50,7 @@ io.on('connection', function(socket){
                     db.close();
                 });
             }
+            socket.emit('message', message);
         }else{
             socket.emit('info', 'Not registered. You should register first.');
         }
@@ -60,19 +61,22 @@ io.on('connection', function(socket){
             MongoClient.connect(url, function(err, db) {
                 db.collection('contacts').find({'owner': pub_key}).toArray(function(err, res){
                     var conversations = {};
+                    var count = 0;
                     if(err == null){
                         for(var contact of res){
-                            db.collection('messages').find({$or: [{'sender': pub_key}, {'to': pub_key}]}).limit(50).toArray(function(err, resmes){
-                                if(err == null){
-                                    conversations[contact.pub_key] = resmes;
-                                }
-                                if(Object.keys(conversations).length == res.length){
-                                    socket.emit('info', 'Conversations retrieved.');
-                                    socket.emit('conversations', conversations);
-                                    console.log(conversations);
-                                    db.close();
-                                }
-                            });
+                            (function(saved_contact){
+                                db.collection('messages').find({$or: [{'sender': pub_key, 'to': saved_contact.pub_key}, {'sender': saved_contact.pub_key, 'to': pub_key}]}).limit(50).toArray(function(err, resmes){
+                                    if(err == null){
+                                        conversations[saved_contact.pub_key] = resmes;
+                                        ++count;
+                                    }
+                                    if(count == res.length){
+                                        socket.emit('info', 'Conversations retrieved.');
+                                        socket.emit('conversations', conversations);
+                                        db.close();
+                                    }
+                                });
+                            })(contact);
                         }
                     }
                 });
