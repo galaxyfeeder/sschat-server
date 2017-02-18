@@ -34,23 +34,19 @@ io.on('connection', function(socket){
                 'message': json.message,
                 'sender': pub_key,
                 'to': json.to,
-                'timestamp': new Date()
+                'timestamp': new Date(),
+                'encrypt': json.encrypt
             };
-            if(json.to in clients){
-                message['sended'] = true;
+            if(json.to in clients && json.to == json.encrypt){
                 socket.broadcast.to(clients[json.to]).emit('message', message);
-                MongoClient.connect(url, function(err, db) {
-                    db.collection('messages').insertOne(message, function(err, res){});
-                    db.close();
-                });
-            }else{
-                message['sended'] = false;
-                MongoClient.connect(url, function(err, db) {
-                    db.collection('messages').insertOne(message, function(err, res){});
-                    db.close();
-                });
             }
-            socket.emit('message', message);
+            if(json.encrypt == pub_key){
+                socket.emit('message', message);
+            }
+            MongoClient.connect(url, function(err, db) {
+                db.collection('messages').insertOne(message, function(err, res){});
+                db.close();
+            });
         }else{
             socket.emit('info', 'Not registered. You should register first.');
         }
@@ -65,7 +61,8 @@ io.on('connection', function(socket){
                     if(err == null){
                         for(var contact of res){
                             (function(saved_contact){
-                                db.collection('messages').find({$or: [{'sender': pub_key, 'to': saved_contact.pub_key}, {'sender': saved_contact.pub_key, 'to': pub_key}]}).limit(50).toArray(function(err, resmes){
+                                db.collection('messages').find({$or: [{'sender': pub_key, 'to': saved_contact.pub_key, 'encrypt': pub_key},
+                                                                      {'sender': saved_contact.pub_key, 'to': pub_key, 'encrypt': pub_key}]}).limit(50).toArray(function(err, resmes){
                                     if(err == null){
                                         conversations[saved_contact.pub_key] = resmes;
                                         ++count;
