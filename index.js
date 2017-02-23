@@ -139,16 +139,22 @@ io.on('connection', function(socket){
 
     socket.on('edit contact', function(data){
         // data = {'pub_key': '...', 'name': '....'}
+        var json = JSON.parse(data);
         if(pub_key !== undefined){
             MongoClient.connect(url, function(err, db) {
-                db.collection('contacts').updateOne({'owner': pub_key, 'pub_key': data['pub_key']}, {'name': data['name']}, function(err, res){
+                db.collection('contacts').updateOne({'owner': pub_key, 'pub_key': json.pub_key}, {$set: {'name': json.name}}, function(err, res){
                     if(err == null){
                         socket.emit('info', data['pub_key']+' edited correctly.');
+                        db.collection('contacts').find({'owner': pub_key}).toArray(function(err, res){
+                            if(err == null){
+                                socket.emit('contacts', res);
+                                db.close();
+                            }
+                        });
                     }else{
                         socket.emit('info', data['pub_key']+' not edited correctly.');
                     }
                 });
-                db.close();
             });
         }else{
             socket.emit('info', 'Not registered. You should register first.');
@@ -161,8 +167,6 @@ io.on('connection', function(socket){
                 db.collection('contacts').find({'owner': pub_key}).toArray(function(err, res){
                     if(err == null){
                         socket.emit('contacts', res);
-                    }else{
-                        socket.emit('info', 'Contacts not edited correctly.');
                     }
                 });
                 db.close();
